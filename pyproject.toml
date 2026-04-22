@@ -1,0 +1,23 @@
+[project]
+name = "vlm_jax_light"
+version = "0.1.0"
+description = "VLM code in python -> jax"
+authors = [
+    {name = "sdubreui",email = "sylvain.dubreuil@onera.fr"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "gmsh (>=4.14.1,<5.0.0)",
+    "numpy (>=2.3.4,<3.0.0)",
+    "jaxlib (>=0.8.0,<0.9.0)",
+    "jax (>=0.8.0,<0.9.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [{include = "VLM_light"}]

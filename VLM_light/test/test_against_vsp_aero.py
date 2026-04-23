@@ -7,20 +7,20 @@ import jax
 jax.config.update("jax_enable_x64", True)
 
 test_case = "rectangular_wing_20_40"
-test_case = "rectangular_wing_20_40_sweep_15"
-test_case = "rectangular_wing_20_40_sweep_15_twist_15"
+# test_case = "rectangular_wing_20_40_sweep_15"
+# test_case = "rectangular_wing_20_40_sweep_15_twist_15"
 
-mesh_file = 'meshes/' + test_case + '.msh'
+mesh_file = 'meshes/' + test_case + '_no_sym.msh'
 Alpha = jnp.linspace(0,10,11)
 v_inf = 100.0
 rho = 0.0023770
-S_ref = 10.0
+S_ref = 20.0
 CL_alpha = []
 CD_alpha = []
 CL_distribution = []
 
 # creation of the study 
-my_study = VlmStudyOptimized(mesh_file,Alpha[0],v_inf = v_inf,rho = rho,symmetry=True,x_wake = 1e6)
+my_study = VlmStudyOptimized(mesh_file,Alpha[0],v_inf = v_inf,rho = rho,symmetry=False,x_wake = 1e6)
 for alpha in Alpha :
     print("alpha=", alpha)
     surfaces = my_study.compute_topology()

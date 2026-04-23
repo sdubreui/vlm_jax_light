@@ -590,7 +590,9 @@ class VlmStudyOptimized():
         segment_bounds = segment_bounds.at[4*n_panels+3:4*(n_panels+n_trailing)+3:4,0,:].set(D)
         segment_bounds = segment_bounds.at[4*n_panels+3:4*(n_panels+n_trailing)+3:4,1,:].set(ring_points[trailing_flag, 3, :])
 
-        #Symmetry
+        #Symmetry segments - conditionally applied based on self.symmetry flag
+        symmetry_flag = jnp.asarray(self.symmetry, dtype=jnp.float32)
+        
         ring_A_sym = ring_points[:, 0, :].copy()
         ring_A_sym = ring_A_sym.at[:,1].set(-ring_A_sym[:,1])
         ring_B_sym = ring_points[:, 1, :].copy()
@@ -600,42 +602,59 @@ class VlmStudyOptimized():
         ring_D_sym = ring_points[:, 3, :].copy()
         ring_D_sym = ring_D_sym.at[:,1].set(-ring_D_sym[:,1])
 
-        #A-B
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,0,:].set(ring_B_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,1,:].set(ring_A_sym)
-        #B-C
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,0,:].set(ring_A_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,1,:].set(ring_D_sym)
-        #C-D
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,0,:].set(ring_D_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,1,:].set(ring_C_sym)
-        #D-A
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,0,:].set(ring_C_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,1,:].set(ring_B_sym)       
+        # Apply symmetry flag to bound segments (scale by 0 or 1)
+        # A-B
+        seg_ab_sym = jnp.where(symmetry_flag > 0.5, ring_B_sym, jnp.zeros_like(ring_B_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,0,:].set(seg_ab_sym)
+        seg_ab_sym_b = jnp.where(symmetry_flag > 0.5, ring_A_sym, jnp.zeros_like(ring_A_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,1,:].set(seg_ab_sym_b)
+        # B-C
+        seg_bc_sym = jnp.where(symmetry_flag > 0.5, ring_A_sym, jnp.zeros_like(ring_A_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,0,:].set(seg_bc_sym)
+        seg_bc_sym_b = jnp.where(symmetry_flag > 0.5, ring_D_sym, jnp.zeros_like(ring_D_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,1,:].set(seg_bc_sym_b)
+        # C-D
+        seg_cd_sym = jnp.where(symmetry_flag > 0.5, ring_D_sym, jnp.zeros_like(ring_D_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,0,:].set(seg_cd_sym)
+        seg_cd_sym_b = jnp.where(symmetry_flag > 0.5, ring_C_sym, jnp.zeros_like(ring_C_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,1,:].set(seg_cd_sym_b)
+        # D-A
+        seg_da_sym = jnp.where(symmetry_flag > 0.5, ring_C_sym, jnp.zeros_like(ring_C_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,0,:].set(seg_da_sym)
+        seg_da_sym_b = jnp.where(symmetry_flag > 0.5, ring_B_sym, jnp.zeros_like(ring_B_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,1,:].set(seg_da_sym_b)
 
-        #Symmetry trailing edge
+        #Symmetry trailing edge segments - conditionally applied
 
-        ring_B_sym = ring_points[trailing_flag, 2, :].copy()
-        ring_A_sym = ring_points[trailing_flag, 3, :].copy()
-        ring_C_sym = C.copy()
-        ring_D_sym = D.copy()
-        ring_A_sym = ring_A_sym.at[:,1].set(-ring_A_sym[:,1])
-        ring_B_sym = ring_B_sym.at[:,1].set(-ring_B_sym[:,1])
-        ring_C_sym = ring_C_sym.at[:,1].set(-ring_C_sym[:,1])
-        ring_D_sym = ring_D_sym.at[:,1].set(-ring_D_sym[:,1])
+        ring_B_sym_te = ring_points[trailing_flag, 2, :].copy()
+        ring_A_sym_te = ring_points[trailing_flag, 3, :].copy()
+        ring_C_sym_te = C.copy()
+        ring_D_sym_te = D.copy()
+        ring_A_sym_te = ring_A_sym_te.at[:,1].set(-ring_A_sym_te[:,1])
+        ring_B_sym_te = ring_B_sym_te.at[:,1].set(-ring_B_sym_te[:,1])
+        ring_C_sym_te = ring_C_sym_te.at[:,1].set(-ring_C_sym_te[:,1])
+        ring_D_sym_te = ring_D_sym_te.at[:,1].set(-ring_D_sym_te[:,1])
 
-        #A-B
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,0,:].set(ring_B_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,1,:].set(ring_A_sym)
-        #B-C
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,0,:].set(ring_A_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,1,:].set(ring_D_sym)
-        #C-D
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,0,:].set(ring_D_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,1,:].set(ring_C_sym)
-        #D-A
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,0,:].set(ring_C_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,1,:].set(ring_B_sym) 
+        # A-B
+        seg_ab_sym_te = jnp.where(symmetry_flag > 0.5, ring_B_sym_te, jnp.zeros_like(ring_B_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,0,:].set(seg_ab_sym_te)
+        seg_ab_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_A_sym_te, jnp.zeros_like(ring_A_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,1,:].set(seg_ab_sym_te_b)
+        # B-C
+        seg_bc_sym_te = jnp.where(symmetry_flag > 0.5, ring_A_sym_te, jnp.zeros_like(ring_A_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,0,:].set(seg_bc_sym_te)
+        seg_bc_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_D_sym_te, jnp.zeros_like(ring_D_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,1,:].set(seg_bc_sym_te_b)
+        # C-D
+        seg_cd_sym_te = jnp.where(symmetry_flag > 0.5, ring_D_sym_te, jnp.zeros_like(ring_D_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,0,:].set(seg_cd_sym_te)
+        seg_cd_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_C_sym_te, jnp.zeros_like(ring_C_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,1,:].set(seg_cd_sym_te_b)
+        # D-A
+        seg_da_sym_te = jnp.where(symmetry_flag > 0.5, ring_C_sym_te, jnp.zeros_like(ring_C_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,0,:].set(seg_da_sym_te)
+        seg_da_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_B_sym_te, jnp.zeros_like(ring_B_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,1,:].set(seg_da_sym_te_b)
         
         segments_ids_temp = jnp.repeat(jnp.arange(0, n_panels), 4)
         segments_ids = jnp.concatenate((segments_ids_temp,jnp.repeat(jnp.arange(0, n_panels)[trailing_flag], 4),segments_ids_temp,jnp.repeat(jnp.arange(0, n_panels)[trailing_flag], 4)))
@@ -720,12 +739,16 @@ class VlmStudyOptimized():
         )
 
     def _compute_segment_bounds_with_offset(self, ring_points, trailing_flag, offset, alpha):
-        """Modified version of compute_segment_bounds that handles global indexing."""
+        """Modified version of compute_segment_bounds that handles global indexing.
+        Supports both symmetric and non-symmetric configurations using conditional masking.
+        """
         n_panels = ring_points.shape[0]
         
-        n_trailing = np.sum(np.array(trailing_flag,dtype=int))    
+        n_trailing = np.sum(np.array(trailing_flag,dtype=int))
         
-        segment_bounds = jnp.zeros((4*(n_panels+n_trailing)*2, 2, 3)) #*2 assuming symmetry
+        # Always allocate maximum size (with symmetry) for static JAX compilation
+        # Non-symmetric entries will be zeroed out via masking
+        segment_bounds = jnp.zeros((4*(n_panels+n_trailing)*2, 2, 3)) #*2 for symmetry allocation
         # 4 segments of each pannel
         #A-B
         segment_bounds = segment_bounds.at[:4*n_panels:4, 0, :].set(ring_points[:, 0, :])
@@ -763,7 +786,10 @@ class VlmStudyOptimized():
         segment_bounds = segment_bounds.at[4*n_panels+3:4*(n_panels+n_trailing)+3:4,0,:].set(D)
         segment_bounds = segment_bounds.at[4*n_panels+3:4*(n_panels+n_trailing)+3:4,1,:].set(ring_points[trailing_flag, 3, :])
 
-        #Symmetry
+        #Symmetry segments - conditionally applied based on self.symmetry flag
+        # When symmetry=False, these remain as zeros and don't contribute to circulation
+        symmetry_flag = jnp.asarray(self.symmetry, dtype=jnp.float32)
+        
         ring_A_sym = ring_points[:, 0, :].copy()
         ring_A_sym = ring_A_sym.at[:,1].set(-ring_A_sym[:,1])
         ring_B_sym = ring_points[:, 1, :].copy()
@@ -773,42 +799,58 @@ class VlmStudyOptimized():
         ring_D_sym = ring_points[:, 3, :].copy()
         ring_D_sym = ring_D_sym.at[:,1].set(-ring_D_sym[:,1])
 
-        #A-B
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,0,:].set(ring_B_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,1,:].set(ring_A_sym)
-        #B-C
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,0,:].set(ring_A_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,1,:].set(ring_D_sym)
-        #C-D
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,0,:].set(ring_D_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,1,:].set(ring_C_sym)
-        #D-A
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,0,:].set(ring_C_sym)
-        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,1,:].set(ring_B_sym)       
+        # Apply symmetry flag to bound segments (scale by 0 or 1)
+        # A-B
+        seg_ab_sym = jnp.where(symmetry_flag > 0.5, ring_B_sym, jnp.zeros_like(ring_B_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,0,:].set(seg_ab_sym)
+        seg_ab_sym_b = jnp.where(symmetry_flag > 0.5, ring_A_sym, jnp.zeros_like(ring_A_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing):4*(2*n_panels+n_trailing):4,1,:].set(seg_ab_sym_b)
+        # B-C
+        seg_bc_sym = jnp.where(symmetry_flag > 0.5, ring_A_sym, jnp.zeros_like(ring_A_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,0,:].set(seg_bc_sym)
+        seg_bc_sym_b = jnp.where(symmetry_flag > 0.5, ring_D_sym, jnp.zeros_like(ring_D_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+1:4*(2*n_panels+n_trailing)+1:4,1,:].set(seg_bc_sym_b)
+        # C-D
+        seg_cd_sym = jnp.where(symmetry_flag > 0.5, ring_D_sym, jnp.zeros_like(ring_D_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,0,:].set(seg_cd_sym)
+        seg_cd_sym_b = jnp.where(symmetry_flag > 0.5, ring_C_sym, jnp.zeros_like(ring_C_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+2:4*(2*n_panels+n_trailing)+2:4,1,:].set(seg_cd_sym_b)
+        # D-A
+        seg_da_sym = jnp.where(symmetry_flag > 0.5, ring_C_sym, jnp.zeros_like(ring_C_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,0,:].set(seg_da_sym)
+        seg_da_sym_b = jnp.where(symmetry_flag > 0.5, ring_B_sym, jnp.zeros_like(ring_B_sym))
+        segment_bounds = segment_bounds.at[4*(n_panels+n_trailing)+3:4*(2*n_panels+n_trailing)+3:4,1,:].set(seg_da_sym_b)
 
-        #Symmetry trailing edge
+        # Symmetry trailing edge segments - conditionally applied
+        ring_B_sym_te = ring_points[trailing_flag, 2, :].copy()
+        ring_A_sym_te = ring_points[trailing_flag, 3, :].copy()
+        ring_C_sym_te = C.copy()
+        ring_D_sym_te = D.copy()
+        ring_A_sym_te = ring_A_sym_te.at[:,1].set(-ring_A_sym_te[:,1])
+        ring_B_sym_te = ring_B_sym_te.at[:,1].set(-ring_B_sym_te[:,1])
+        ring_C_sym_te = ring_C_sym_te.at[:,1].set(-ring_C_sym_te[:,1])
+        ring_D_sym_te = ring_D_sym_te.at[:,1].set(-ring_D_sym_te[:,1])
 
-        ring_B_sym = ring_points[trailing_flag, 2, :].copy()
-        ring_A_sym = ring_points[trailing_flag, 3, :].copy()
-        ring_C_sym = C.copy()
-        ring_D_sym = D.copy()
-        ring_A_sym = ring_A_sym.at[:,1].set(-ring_A_sym[:,1])
-        ring_B_sym = ring_B_sym.at[:,1].set(-ring_B_sym[:,1])
-        ring_C_sym = ring_C_sym.at[:,1].set(-ring_C_sym[:,1])
-        ring_D_sym = ring_D_sym.at[:,1].set(-ring_D_sym[:,1])
-
-        #A-B
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,0,:].set(ring_B_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,1,:].set(ring_A_sym)
-        #B-C
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,0,:].set(ring_A_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,1,:].set(ring_D_sym)
-        #C-D
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,0,:].set(ring_D_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,1,:].set(ring_C_sym)
-        #D-A
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,0,:].set(ring_C_sym)
-        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,1,:].set(ring_B_sym) 
+        # A-B
+        seg_ab_sym_te = jnp.where(symmetry_flag > 0.5, ring_B_sym_te, jnp.zeros_like(ring_B_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,0,:].set(seg_ab_sym_te)
+        seg_ab_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_A_sym_te, jnp.zeros_like(ring_A_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing):8*(n_panels+n_trailing):4,1,:].set(seg_ab_sym_te_b)
+        # B-C
+        seg_bc_sym_te = jnp.where(symmetry_flag > 0.5, ring_A_sym_te, jnp.zeros_like(ring_A_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,0,:].set(seg_bc_sym_te)
+        seg_bc_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_D_sym_te, jnp.zeros_like(ring_D_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+1:8*(n_panels+n_trailing)+1:4,1,:].set(seg_bc_sym_te_b)
+        # C-D
+        seg_cd_sym_te = jnp.where(symmetry_flag > 0.5, ring_D_sym_te, jnp.zeros_like(ring_D_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,0,:].set(seg_cd_sym_te)
+        seg_cd_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_C_sym_te, jnp.zeros_like(ring_C_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+2:8*(n_panels+n_trailing)+2:4,1,:].set(seg_cd_sym_te_b)
+        # D-A
+        seg_da_sym_te = jnp.where(symmetry_flag > 0.5, ring_C_sym_te, jnp.zeros_like(ring_C_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,0,:].set(seg_da_sym_te)
+        seg_da_sym_te_b = jnp.where(symmetry_flag > 0.5, ring_B_sym_te, jnp.zeros_like(ring_B_sym_te))
+        segment_bounds = segment_bounds.at[4*(2*n_panels+n_trailing)+3:8*(n_panels+n_trailing)+3:4,1,:].set(seg_da_sym_te_b)
         
         # Correct Indexing: Repeat the GLOBAL panel indices
         global_indices = jnp.arange(offset, offset + n_panels)

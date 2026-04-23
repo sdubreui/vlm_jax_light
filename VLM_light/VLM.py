@@ -1103,6 +1103,95 @@ class VlmStudyOptimized():
         
         return CL, CD, forces, delta_L, delta_D
     
+    
+    def compute_cl_distribution_span(self, delta_L, all_ring_points):
+        """
+        Computes the integrated lift coefficient distribution over the span.
+        Integrates cl distribution across chord direction for each span column.
+        
+        Inputs:
+            delta_L: array [n_panels], lift contribution per panel
+            all_ring_points: array [n_panels, 4, 3], ring point coordinates for each panel
+        
+        Outputs:
+            y_span: array [n_panels], span-wise position (y-coordinate) at panel center
+            cl_local: array [n_panels], local lift coefficient for each panel
+            cl_distribution: dict with keys:
+                'y_column': span positions of panel columns
+                'cl_integrated': integrated Cl for each column (integral of cl over chord at each span position)
+        """
+        n_panels = all_ring_points.shape[0]
+        
+        # Extract span-wise position from ring points (y-coordinate at the middle of the bound segment)
+        # Ring points: [0] = A, [1] = B (leading edge left), [2] = C (trailing edge left), [3] = D
+        # The span position is the y-coordinate of the bound segment (between A and B)
+        y_span = (all_ring_points[:, 0, 1] + all_ring_points[:, 1, 1]) / 2.0
+        
+        # Compute chord length (distance from leading edge to trailing edge in x-direction)
+        # This is the x-distance between ring points [1] (B) and [2] (C)
+        # This is the chordwise extent (delta_x) for each panel
+        chord = jnp.abs(all_ring_points[:, 2, 0] - all_ring_points[:, 1, 0])
+        
+        # Compute span-wise extent (delta_y) from the y-coordinate difference
+        # Between ring points [0] (A) and [1] (B)
+        delta_y = jnp.abs(all_ring_points[:, 1, 1] - all_ring_points[:, 0, 1])
+        
+        # Dynamic pressure
+        q_inf = 0.5 * self.rho * self.v_inf**2
+        
+        # Local lift coefficient: cl = 2 * delta_L / (q_inf * chord * delta_y)
+        # Avoid division by zero
+        eps = 1e-10
+        cl_local = 2.0 * delta_L / (q_inf * (chord + eps) * (delta_y + eps))
+        
+        # Group panels by their span-wise position (columns)
+        # Find unique y-positions with small tolerance to account for numerical precision
+        y_span_np = np.array(y_span)
+        cl_local_np = np.array(cl_local)
+        chord_np = np.array(chord)
+        
+        # Sort by y-position
+        sorted_indices = np.argsort(y_span_np)
+        y_sorted = y_span_np[sorted_indices]
+        cl_sorted = cl_local_np[sorted_indices]
+        chord_sorted = chord_np[sorted_indices]
+        
+        # Group panels into columns: find discontinuities in y-position
+        tolerance = 1e-6 * (np.max(y_sorted) - np.min(y_sorted)) if np.max(y_sorted) > np.min(y_sorted) else 1e-6
+        column_edges = [0]
+        
+        for i in range(1, len(y_sorted)):
+            if np.abs(y_sorted[i] - y_sorted[i-1]) > tolerance:
+                column_edges.append(i)
+        column_edges.append(len(y_sorted))
+        
+        # Integrate cl over chord for each column
+        y_column = []
+        cl_integrated = []
+        
+        for i in range(len(column_edges) - 1):
+            start_idx = column_edges[i]
+            end_idx = column_edges[i + 1]
+            
+            # Column span position (average y of panels in this column)
+            y_col = np.mean(y_sorted[start_idx:end_idx])
+            
+            # Integrated Cl over chord: integral of cl * dx over the chord direction
+            # For discretized panels: sum of cl * chord_length
+            cl_int = np.sum(cl_sorted[start_idx:end_idx] * chord_sorted[start_idx:end_idx])
+            
+            y_column.append(y_col)
+            cl_integrated.append(cl_int)
+        
+        cl_distribution = {
+            'y_column': np.array(y_column),
+            'cl_integrated': np.array(cl_integrated),
+            'y_all': y_span_np,
+            'cl_all': cl_local_np
+        }
+        
+        return y_span_np, cl_local_np, cl_distribution
+    
     @partial(jit, static_argnums=(0,))
     def compute_force_at_nodes(self,forces):
         #forces are computed at the middle 1/4 chord of each panel, we have to project this forces at nodes

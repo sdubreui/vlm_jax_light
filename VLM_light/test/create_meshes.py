@@ -2,7 +2,7 @@ import numpy as np
 import gmsh
 
 
-# #aile rectangulaire 
+# rectangular wing 
 
 gmsh.initialize()
 # Next we add a new model named "wing" (if gmsh.model.add() is not called a new
@@ -19,7 +19,7 @@ lc = 0.1
 #chord and semi span
 c = 1.0
 b = 10.0
-sweep = 0.0*np.pi/180.0
+sweep = 15.0*np.pi/180.0
 
 gmsh.model.geo.addPoint(0.0, 0.0, 0.0, lc, 1)
 gmsh.model.geo.addPoint(c, 0.0, 0.0, lc, 2)
@@ -50,7 +50,7 @@ gmsh.model.mesh.setTransfiniteCurve(4,ny1)
 gmsh.model.mesh.setTransfiniteSurface(1)
 gmsh.model.mesh.setRecombine(2,1)
 gmsh.model.mesh.generate(2)
-gmsh.write("meshes/rectangular_wing_20_40.msh")
+gmsh.write("meshes/rectangular_wing_20_40_sweep_15.msh")
 
 
 

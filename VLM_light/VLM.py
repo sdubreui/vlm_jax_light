@@ -61,16 +61,20 @@ class VlmStudyOptimized():
         all_leading_edge_bool = []
         all_trailing_edge_bool = []
         all_areas = []
+        surface_ids_list = []  # Track which surface each panel belongs to
         panel_offset = 0
         
         # First pass: collect all data and build panel_pair mapping
         panel_pair_indices_list = [-1] * sum(s['n_panels'] for s in self.surfaces)
         panel_pair_type_list = [0] * sum(s['n_panels'] for s in self.surfaces)
         
-        for surface in self.surfaces:
+        for surface_idx, surface in enumerate(self.surfaces):
             n_panels = surface['n_panels']
             all_ring_points.append(surface['ring_points'])
             all_areas.append(surface['areas'].flatten())
+            
+            # Track surface ID for each panel (1-indexed for consistency with VortexSheet)
+            surface_ids_list.extend([surface_idx + 1] * n_panels)
             
             # Convert leading_edge (list of indices) to boolean array
             leading_edge_bool = np.zeros(n_panels, dtype=bool)
@@ -105,6 +109,7 @@ class VlmStudyOptimized():
         self.all_leading_edge_np = np.concatenate(all_leading_edge_bool)  # Shape: (n_panels,) boolean
         self.all_trailing_edge_np = np.concatenate(all_trailing_edge_bool)  # Shape: (n_panels,) boolean
         self.all_areas_np = np.concatenate(all_areas)  # Shape: (n_panels,)
+        self.surface_ids_np = np.array(surface_ids_list, dtype=np.int32)  # Shape: (n_panels,) surface ID for each panel
         self.S_ref = float(np.sum(self.all_areas_np))
         
         # Store panel pair mapping as numpy for now
@@ -115,6 +120,7 @@ class VlmStudyOptimized():
         print(f"Pre-computed ring_points shape: {self.all_ring_points_np.shape}")
         print(f"Pre-computed leading_edge shape: {self.all_leading_edge_np.shape}")
         print(f"Pre-computed areas: total S_ref = {self.S_ref}")
+        print(f"Pre-computed surface IDs shape: {self.surface_ids_np.shape}")
     
     def _precompute_segment_indices(self):
         """Pre-computes indices for segment_sum."""
@@ -1150,6 +1156,7 @@ class VlmStudyOptimized():
         """
         Computes the integrated lift coefficient distribution over the span.
         Integrates cl distribution across chord direction for each span column.
+        Handles multiple surfaces by organizing output by surface ID.
         
         Inputs:
             delta_L: array [n_panels], lift contribution per panel
@@ -1159,8 +1166,13 @@ class VlmStudyOptimized():
             y_span: array [n_panels], span-wise position (y-coordinate) at panel center
             cl_local: array [n_panels], local lift coefficient for each panel
             cl_distribution: dict with keys:
-                'y_column': span positions of panel columns
+                'y_column': span positions of panel columns (aggregated over all surfaces)
                 'cl_integrated': integrated Cl for each column (integral of cl over chord at each span position)
+                'surfaces': dict organized by surface_id with surface-specific data:
+                    - 'y_column': span positions for this surface
+                    - 'cl_integrated': integrated Cl for this surface
+                    - 'y_all': all y-positions for panels in this surface
+                    - 'cl_all': all local Cl values for panels in this surface
         """
         n_panels = all_ring_points.shape[0]
         
@@ -1186,17 +1198,20 @@ class VlmStudyOptimized():
         eps = 1e-10
         cl_local = 2.0 * delta_L / (q_inf * (chord + eps) * (delta_y + eps))
         
-        # Group panels by their span-wise position (columns)
-        # Find unique y-positions with small tolerance to account for numerical precision
+        # Convert to numpy for grouping and sorting
         y_span_np = np.array(y_span)
         cl_local_np = np.array(cl_local)
         chord_np = np.array(chord)
+        delta_y_np = np.array(delta_y)
+        surface_ids_np = self.surface_ids_np
         
         # Sort by y-position
         sorted_indices = np.argsort(y_span_np)
         y_sorted = y_span_np[sorted_indices]
         cl_sorted = cl_local_np[sorted_indices]
         chord_sorted = chord_np[sorted_indices]
+        delta_y_sorted = delta_y_np[sorted_indices]
+        surface_ids_sorted = surface_ids_np[sorted_indices]
         
         # Group panels into columns: find discontinuities in y-position
         tolerance = 1e-6 * (np.max(y_sorted) - np.min(y_sorted)) if np.max(y_sorted) > np.min(y_sorted) else 1e-6
@@ -1222,14 +1237,82 @@ class VlmStudyOptimized():
             # For discretized panels: sum of cl * chord_length
             cl_int = np.sum(cl_sorted[start_idx:end_idx] * chord_sorted[start_idx:end_idx])
             
+            # Normalize by the total chord size (sum of delta_x) for this column
+            chord_total = np.sum(chord_sorted[start_idx:end_idx])
+            eps = 1e-10
+            cl_int_normalized = cl_int / (chord_total + eps)
+            
             y_column.append(y_col)
-            cl_integrated.append(cl_int)
+            cl_integrated.append(cl_int_normalized)
+        
+        # Organize data by surface
+        all_surfaces = sorted(set(self.surface_ids_np))
+        surface_distributions = {}
+        
+        for surface_id in all_surfaces:
+            # Find indices for this surface
+            surface_mask = surface_ids_np == surface_id
+            surface_panel_indices = np.where(surface_mask)[0]
+            
+            if len(surface_panel_indices) == 0:
+                continue
+            
+            # Extract data for this surface
+            y_surf = y_span_np[surface_panel_indices]
+            cl_surf = cl_local_np[surface_panel_indices]
+            chord_surf = chord_np[surface_panel_indices]
+            delta_y_surf = delta_y_np[surface_panel_indices]
+            
+            # Sort by y-position for this surface
+            surf_sorted_indices = np.argsort(y_surf)
+            y_surf_sorted = y_surf[surf_sorted_indices]
+            cl_surf_sorted = cl_surf[surf_sorted_indices]
+            chord_surf_sorted = chord_surf[surf_sorted_indices]
+            delta_y_surf_sorted = delta_y_surf[surf_sorted_indices]
+            
+            # Group into columns for this surface
+            y_surf_min = np.min(y_surf_sorted) if len(y_surf_sorted) > 0 else 0
+            y_surf_max = np.max(y_surf_sorted) if len(y_surf_sorted) > 0 else 1
+            tolerance_surf = 1e-6 * (y_surf_max - y_surf_min) if y_surf_max > y_surf_min else 1e-6
+            
+            column_edges_surf = [0]
+            for i in range(1, len(y_surf_sorted)):
+                if np.abs(y_surf_sorted[i] - y_surf_sorted[i-1]) > tolerance_surf:
+                    column_edges_surf.append(i)
+            column_edges_surf.append(len(y_surf_sorted))
+            
+            # Integrate cl over chord for each column in this surface
+            y_col_surf = []
+            cl_int_surf = []
+            
+            for i in range(len(column_edges_surf) - 1):
+                start_idx = column_edges_surf[i]
+                end_idx = column_edges_surf[i + 1]
+                
+                y_col = np.mean(y_surf_sorted[start_idx:end_idx])
+                cl_int = np.sum(cl_surf_sorted[start_idx:end_idx] * chord_surf_sorted[start_idx:end_idx])
+                
+                # Normalize by the total chord size (sum of delta_x) for this column
+                chord_total = np.sum(chord_surf_sorted[start_idx:end_idx])
+                eps = 1e-10
+                cl_int_normalized = cl_int / (chord_total + eps)
+                
+                y_col_surf.append(y_col)
+                cl_int_surf.append(cl_int_normalized)
+            
+            surface_distributions[surface_id] = {
+                'y_column': np.array(y_col_surf),
+                'cl_integrated': np.array(cl_int_surf),
+                'y_all': y_surf,
+                'cl_all': cl_surf
+            }
         
         cl_distribution = {
             'y_column': np.array(y_column),
             'cl_integrated': np.array(cl_integrated),
             'y_all': y_span_np,
-            'cl_all': cl_local_np
+            'cl_all': cl_local_np,
+            'surfaces': surface_distributions  # New: organized by surface
         }
         
         return y_span_np, cl_local_np, cl_distribution

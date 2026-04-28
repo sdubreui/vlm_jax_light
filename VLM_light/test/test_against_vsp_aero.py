@@ -10,7 +10,7 @@ jax.config.update("jax_enable_x64", True)
 # test_case = "rectangular_wing_20_40_sweep_15"
 # test_case = "rectangular_wing_20_40_sweep_15_twist_15"
 test_case = "rectangular_wing_20_40_HT"
-
+ 
 mesh_file = 'meshes/' + test_case + '.msh'
 Alpha = jnp.linspace(0,10,11)
 v_inf = 100.0

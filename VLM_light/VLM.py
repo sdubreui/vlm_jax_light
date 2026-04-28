@@ -689,7 +689,7 @@ class VlmStudyOptimized():
         return areas, normals   
 
 
-    def compute_geometry(self, nodes_coords: jnp.ndarray, surfaces: List[Dict],alpha) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    def compute_geometry(self, nodes_coords: jnp.ndarray, surfaces: List[Dict],alpha) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
         """
         Unified geometry update for multiple surfaces.
         Ensures that panel indices (0 to N-1) are consistent across all geometry arrays.

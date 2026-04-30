@@ -1238,12 +1238,12 @@ class VlmStudyOptimized():
             cl_int = np.sum(cl_sorted[start_idx:end_idx] * chord_sorted[start_idx:end_idx])
             
             # # Normalize by the total chord size (sum of delta_x) for this column
-            # chord_total = np.sum(chord_sorted[start_idx:end_idx])
-            # eps = 1e-10
-            # cl_int_normalized = cl_int / (chord_total + eps)
+            chord_total = np.sum(chord_sorted[start_idx:end_idx])
+            eps = 1e-10
+            cl_int_normalized = cl_int / (chord_total + eps)
             
             y_column.append(y_col)
-            cl_integrated.append(cl_int)#cl_int_normalized)
+            cl_integrated.append(cl_int_normalized)
         
         # Organize data by surface
         all_surfaces = sorted(set(self.surface_ids_np))

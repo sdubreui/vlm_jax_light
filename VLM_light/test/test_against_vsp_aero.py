@@ -6,10 +6,10 @@ import jax.numpy as jnp
 import jax
 jax.config.update("jax_enable_x64", True)
 
-# test_case = "rectangular_wing_20_40"
+test_case = "rectangular_wing_20_40"
 # test_case = "rectangular_wing_20_40_sweep_15"
 # test_case = "rectangular_wing_20_40_sweep_15_twist_15"
-test_case = "rectangular_wing_20_40_HT"
+# test_case = "rectangular_wing_20_40_HT"
  
 mesh_file = 'meshes/' + test_case + '.msh'
 Alpha = jnp.linspace(0,10,11)
@@ -67,7 +67,7 @@ plt.savefig('figures/CD_CL_' + test_case + '.png',dpi=300)
 #load distribution comparison 
 vsp_load = parse_lod_file('ref_results/' + test_case + '.lod') 
 #plotting the load distribution for the different angles of attack
-n_surfaces = 2
+n_surfaces = 1
 plt.figure()
 k = 0
 colors = plt.get_cmap('jet')

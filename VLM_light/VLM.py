@@ -1152,7 +1152,7 @@ class VlmStudyOptimized():
         return CL, CD, forces, delta_L, delta_D
     
     
-    def compute_cl_distribution_span(self, delta_L, all_ring_points):
+    def compute_cl_distribution_span(self, delta_L, all_ring_points,tol=1e-3):
         """
         Computes the integrated lift coefficient distribution over the span.
         Integrates cl distribution across chord direction for each span column.
@@ -1161,7 +1161,7 @@ class VlmStudyOptimized():
         Inputs:
             delta_L: array [n_panels], lift contribution per panel
             all_ring_points: array [n_panels, 4, 3], ring point coordinates for each panel
-        
+            tol: float, tolerance for grouping panels into spanwise columns (default: 1e-3)
         Outputs:
             y_span: array [n_panels], span-wise position (y-coordinate) at panel center
             cl_local: array [n_panels], local lift coefficient for each panel
@@ -1214,7 +1214,7 @@ class VlmStudyOptimized():
         surface_ids_sorted = surface_ids_np[sorted_indices]
         
         # Group panels into columns: find discontinuities in y-position
-        tolerance = 1e-6 * (np.max(y_sorted) - np.min(y_sorted)) if np.max(y_sorted) > np.min(y_sorted) else 1e-6
+        tolerance = tol * (np.max(y_sorted) - np.min(y_sorted)) if np.max(y_sorted) > np.min(y_sorted) else tol
         column_edges = [0]
         
         for i in range(1, len(y_sorted)):
@@ -1237,13 +1237,13 @@ class VlmStudyOptimized():
             # For discretized panels: sum of cl * chord_length
             cl_int = np.sum(cl_sorted[start_idx:end_idx] * chord_sorted[start_idx:end_idx])
             
-            # Normalize by the total chord size (sum of delta_x) for this column
-            chord_total = np.sum(chord_sorted[start_idx:end_idx])
-            eps = 1e-10
-            cl_int_normalized = cl_int / (chord_total + eps)
+            # # Normalize by the total chord size (sum of delta_x) for this column
+            # chord_total = np.sum(chord_sorted[start_idx:end_idx])
+            # eps = 1e-10
+            # cl_int_normalized = cl_int / (chord_total + eps)
             
             y_column.append(y_col)
-            cl_integrated.append(cl_int_normalized)
+            cl_integrated.append(cl_int)#cl_int_normalized)
         
         # Organize data by surface
         all_surfaces = sorted(set(self.surface_ids_np))
@@ -1273,7 +1273,7 @@ class VlmStudyOptimized():
             # Group into columns for this surface
             y_surf_min = np.min(y_surf_sorted) if len(y_surf_sorted) > 0 else 0
             y_surf_max = np.max(y_surf_sorted) if len(y_surf_sorted) > 0 else 1
-            tolerance_surf = 1e-6 * (y_surf_max - y_surf_min) if y_surf_max > y_surf_min else 1e-6
+            tolerance_surf = tol * (y_surf_max - y_surf_min) if y_surf_max > y_surf_min else tol
             
             column_edges_surf = [0]
             for i in range(1, len(y_surf_sorted)):

@@ -1353,9 +1353,9 @@ class VlmStudyOptimized():
     #forces: array, forces vector computed by compute_velocity_and_forces \n
     #output:\n
     #New mesh_file with post processing data
-    def post_processing(self,file_name,forces):
+    def post_processing(self,input_mesh,file_name,forces):
         #copying mesh file
-        with open(self.mesh_file) as f:
+        with open(input_mesh) as f:
             with open(file_name+".msh", "w") as f1:
                 for line in f:
                         f1.write(line)

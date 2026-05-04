@@ -1295,7 +1295,7 @@ class VlmStudyOptimized():
                 # Normalize by the total chord size (sum of delta_x) for this column
                 chord_total = np.sum(chord_surf_sorted[start_idx:end_idx])
                 eps = 1e-10
-                cl_int_normalized = cl_int / (chord_total + eps)
+                cl_int_normalized = cl_int/ (chord_total + eps)
                 
                 y_col_surf.append(y_col)
                 cl_int_surf.append(cl_int_normalized)

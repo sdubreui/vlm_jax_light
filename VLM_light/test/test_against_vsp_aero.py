@@ -6,16 +6,20 @@ import jax.numpy as jnp
 import jax
 jax.config.update("jax_enable_x64", True)
 
-test_case = "rectangular_wing_20_40"
+# test_case = "rectangular_wing_20_40"
 # test_case = "rectangular_wing_20_40_sweep_15"
 # test_case = "rectangular_wing_20_40_sweep_15_twist_15"
 # test_case = "rectangular_wing_20_40_HT"
- 
+test_case = "asg_29"
+
 mesh_file = 'meshes/' + test_case + '.msh'
 Alpha = jnp.linspace(0,10,11)
 v_inf = 100.0
 rho = 0.0023770
-S_ref = 10.0
+if test_case == "asg_29" :
+    S_ref = 5.25
+else :    
+    S_ref = 10.0
 CL_alpha = []
 CD_alpha = []
 CL_distribution = []
@@ -72,10 +76,14 @@ plt.figure()
 k = 0
 colors = plt.get_cmap('jet')
 for alpha in Alpha :
-    #we have to divide by 2 for the symmetry 
-    for s in range(n_surfaces):
-        plt.plot(CL_distribution[k]["surfaces"][s+1]['y_column'],CL_distribution[k]["surfaces"][s+1]['cl_integrated']/(2),color=colors(k/len(Alpha)),label='In_house alpha='+str(alpha))
-        plt.plot(vsp_load[k][s+1]['yavg'],vsp_load[k][s+1]['cli'],color='k',linestyle='--',label='vspaero alpha='+str(alpha))
+    #we have to divide by 2 for the symmetry   
+    if test_case == "asg_29" :
+        plt.plot(CL_distribution[k]['y_column'],CL_distribution[k]['cl_integrated']/(2),color=colors(k/len(Alpha)),label='In_house alpha='+str(alpha))
+        plt.plot(vsp_load[k][1]['yavg'],vsp_load[k][1]['cli'],color='k',linestyle='--',label='vspaero alpha='+str(alpha))
+    else : 
+        for s in range(n_surfaces):
+            plt.plot(CL_distribution[k]["surfaces"][s+1]['y_column'],CL_distribution[k]["surfaces"][s+1]['cl_integrated']/(2),color=colors(k/len(Alpha)),label='In_house alpha='+str(alpha))
+            plt.plot(vsp_load[k][s+1]['yavg'],vsp_load[k][s+1]['cli'],color='k',linestyle='--',label='vspaero alpha='+str(alpha))    
     k += 1
 plt.legend(loc=0)
 plt.grid(True)

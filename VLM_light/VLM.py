@@ -36,7 +36,8 @@ class VlmStudyOptimized():
         # Mesh reading (identical)
         self.surfaces = self.read_gmsh_mesh()
         self.surfaces_topo = self.compute_topology()
-        
+        # extraction des connectivités
+        self.elems = np.concatenate([np.array(surface["mesh"]) for surface in self.surfaces])
         # PRE-COMPUTE: Concatenate all normals into a single array
         # This avoids Python loops in JIT functions
         self._precompute_normals()
@@ -1322,9 +1323,7 @@ class VlmStudyOptimized():
     def compute_force_at_nodes(self, forces):
 
         # extraction des connectivités
-        elems = jnp.array([
-            surface["mesh"] for surface in self.surfaces
-        ])
+        elems = jnp.array(self.elems)
 
         # shape: (n_elem, 4)
         nodes = elems[:, :, 1:5].astype(int) - 1

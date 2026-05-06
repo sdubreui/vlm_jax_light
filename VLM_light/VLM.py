@@ -1317,21 +1317,30 @@ class VlmStudyOptimized():
         
         return y_span_np, cl_local_np, cl_distribution
     
+
     @partial(jit, static_argnums=(0,))
-    def compute_force_at_nodes(self,forces):
-        #forces are computed at the middle 1/4 chord of each panel, we have to project this forces at nodes
-        forces_at_nodes = jnp.zeros((self.nodes.shape[0],3))
-        i = 0
-        for surface in self.surfaces:
-            for points in surface['mesh']:
-                A = int(points[1]-1)
-                B = int(points[2]-1)
-                C = int(points[3]-1)
-                D = int(points[4]-1)
-                for x in [A,B,C,D]:
-                    forces_at_nodes = forces_at_nodes.at[x,:].add(forces[i,:]/4.0)
-                i = i + 1    
-        return forces_at_nodes 
+    def compute_force_at_nodes(self, forces):
+
+        # extraction des connectivités
+        elems = jnp.array([
+            surface["mesh"] for surface in self.surfaces
+        ])
+
+        # shape: (n_elem, 4)
+        nodes = elems[:, :, 1:5].astype(int) - 1
+
+        # aplatir toutes les connexions
+        node_ids = nodes.reshape(-1)
+
+        # répéter les forces (chaque élément contribue à 4 noeuds)
+        f = jnp.repeat(forces, 4, axis=0) / 4.0
+
+        # accumulation vectorisée
+        forces_at_nodes = jnp.zeros((self.nodes.shape[0], 3))
+
+        forces_at_nodes = forces_at_nodes.at[node_ids].add(f)
+
+        return forces_at_nodes
     
     def post_process_deformed_mesh_file(self,Ua,mesh_file_out):
         #copying the mesh file and replacing the points coordinates by the new one

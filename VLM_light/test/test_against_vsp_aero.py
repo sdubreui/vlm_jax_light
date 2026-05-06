@@ -30,7 +30,7 @@ for alpha in Alpha :
     print("alpha=", alpha)
     surfaces = my_study.compute_topology()
     nodes_coord = my_study.nodes[:,1:]
-    segments, segments_ids, control_points, normals, control_point_quart,ring_pts = my_study.compute_geometry(nodes_coord, surfaces, alpha)
+    segments, segments_ids, control_points, normals, control_point_quart,ring_pts = my_study.compute_geometry(nodes_coord, alpha)
     gamma = my_study.compute_circulation_parametrized(segments,segments_ids, control_points,normals,alpha,my_study.v_inf)
     CL,CD,forces_panel,delta_L,delta_D = my_study.compute_CL_CD_forces(gamma,alpha,S_ref,segments,control_point_quart,segments_ids, ring_pts)
     y_span, cl_local, cl_distribution = my_study.compute_cl_distribution_span(delta_L, ring_pts)

@@ -485,8 +485,8 @@ class VlmStudyOptimized():
             #     surfaces[i]['ring_points'][pairs[1]][3] = surfaces[i]['ring_points'][pairs[0]][0]
 
             surfaces[i]['mesh'] = jnp.array(surfaces[i]['mesh'],dtype=int)
-
         gmsh.finalize()
+        self.surfaces = surfaces
         return surfaces
 
 
@@ -689,7 +689,7 @@ class VlmStudyOptimized():
         return areas, normals   
 
 
-    def compute_geometry(self, nodes_coords: jnp.ndarray, surfaces: List[Dict],alpha) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    def compute_geometry(self, nodes_coords: jnp.ndarray,alpha) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
         """
         Unified geometry update for multiple surfaces.
         Ensures that panel indices (0 to N-1) are consistent across all geometry arrays.
@@ -702,7 +702,7 @@ class VlmStudyOptimized():
         all_ring_pts = []
 
         panel_offset = 0
-        
+        surfaces = self.surfaces
         for surface in surfaces:
             # 1. Get panel nodes using surface mesh mapping
             # Subtract 1 because Gmsh tags are 1-based, Python is 0-based

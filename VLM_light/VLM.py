@@ -35,6 +35,7 @@ class VlmStudyOptimized():
         
         # Mesh reading (identical)
         self.surfaces = self.read_gmsh_mesh()
+        self.surfaces_topo = self.compute_topology()
         
         # PRE-COMPUTE: Concatenate all normals into a single array
         # This avoids Python loops in JIT functions
@@ -486,7 +487,6 @@ class VlmStudyOptimized():
 
             surfaces[i]['mesh'] = jnp.array(surfaces[i]['mesh'],dtype=int)
         gmsh.finalize()
-        self.surfaces = surfaces
         return surfaces
 
 
@@ -702,7 +702,7 @@ class VlmStudyOptimized():
         all_ring_pts = []
 
         panel_offset = 0
-        surfaces = self.surfaces
+        surfaces = self.surfaces_topo
         for surface in surfaces:
             # 1. Get panel nodes using surface mesh mapping
             # Subtract 1 because Gmsh tags are 1-based, Python is 0-based

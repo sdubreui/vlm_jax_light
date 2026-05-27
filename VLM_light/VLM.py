@@ -1326,7 +1326,7 @@ class VlmStudyOptimized():
         elems = jnp.array(self.elems)
 
         # shape: (n_elem, 4)
-        nodes = elems[:, :, 1:5].astype(int) - 1
+        nodes = elems[:, 1:5].astype(int) - 1
 
         # aplatir toutes les connexions
         node_ids = nodes.reshape(-1)

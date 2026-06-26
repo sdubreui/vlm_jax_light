@@ -229,3 +229,22 @@ plt.title('Evolution of CL distribution during optimization')
 plt.legend(loc=0)
 plt.grid(True)
 plt.show()
+
+
+plt.figure()
+i = 0
+for CL_dist in CL_distribution_history:
+    plt.plot(CL_dist['y_column'],CL_dist['L_integrated'],label=f'Iter {i}')
+    i+=1
+    
+#eliptic distribution
+y_sections = CL_distribution_history[0]['y_column']
+L = CL_history[-1]*S_ref*0.5*rho*v_inf**2
+dist_elliptic = 4*L/(np.pi*10)*np.sqrt(1-(y_sections/10)**2)    
+plt.plot(y_sections,dist_elliptic,label='Elliptic distribution',color='k',linestyle='--') 
+plt.xlabel('Spanwise coordinate')
+plt.ylabel('Lift distribution')
+plt.title('Evolution of Lift distribution during optimization')   
+plt.legend(loc=0)
+plt.grid(True)
+plt.show()

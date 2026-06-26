@@ -1213,6 +1213,7 @@ class VlmStudyOptimized():
         chord_sorted = chord_np[sorted_indices]
         delta_y_sorted = delta_y_np[sorted_indices]
         surface_ids_sorted = surface_ids_np[sorted_indices]
+        L_sorted = delta_L[sorted_indices]
         
         # Group panels into columns: find discontinuities in y-position
         tolerance = tol * (np.max(y_sorted) - np.min(y_sorted)) if np.max(y_sorted) > np.min(y_sorted) else tol
@@ -1226,7 +1227,7 @@ class VlmStudyOptimized():
         # Integrate cl over chord for each column
         y_column = []
         cl_integrated = []
-        
+        L_int = []
         for i in range(len(column_edges) - 1):
             start_idx = column_edges[i]
             end_idx = column_edges[i + 1]
@@ -1241,6 +1242,8 @@ class VlmStudyOptimized():
             y_column.append(y_col)
             cl_integrated.append(cl_int)
         
+            L_int.append(np.sum(L_sorted[start_idx:end_idx]/abs(delta_y_sorted[start_idx:end_idx])))
+
         # Organize data by surface
         all_surfaces = sorted(set(self.surface_ids_np))
         surface_distributions = {}
@@ -1304,6 +1307,7 @@ class VlmStudyOptimized():
             'cl_integrated': np.array(cl_integrated),
             'y_all': y_span_np,
             'cl_all': cl_local_np,
+            'L_integrated': np.array(L_int),
             'surfaces': surface_distributions  # New: organized by surface
         }
         

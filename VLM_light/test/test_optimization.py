@@ -1,8 +1,8 @@
 # Example of optimization script using jax auto-diff capabibilities
 import os
-os.environ["JAX_LOG_COMPILES"] = "1"
-os.environ["JAX_TRACEBACK_FILTERING"] = "off"
-os.environ["JAX_PLATFORM_NAME"] = "cpu"
+# os.environ["JAX_LOG_COMPILES"] = "1"
+# os.environ["JAX_TRACEBACK_FILTERING"] = "off"
+# os.environ["JAX_PLATFORM_NAME"] = "cpu"
 
 from VLM_light.VLM import VlmStudyOptimized
 from extract_cli_distribution import parse_lod_file
@@ -12,6 +12,7 @@ import jax.numpy as jnp
 import jax
 jax.config.update("jax_enable_x64", True)
 from scipy.optimize import minimize, OptimizeResult
+import time as t
 
 # Optimal twist distribution under CL constraint
 # initial configuration
@@ -25,7 +26,7 @@ my_study = VlmStudyOptimized(initial_mesh,alpha_0,v_inf = v_inf,rho = rho,symmet
 surfaces = my_study.compute_topology()
 # sections where to define the twist control points 
 nodes = jnp.array(my_study.nodes)
-n_cp = 10
+n_cp = 20
 cp_span = jnp.linspace(nodes[:,2].min(),nodes[:,2].max(),n_cp+1)
 
 def obj_fun(X):
@@ -131,6 +132,16 @@ def grad_h_numpy(x):
 
 # Point initial
 x0 = np.array(X, dtype=np.float64) # Explicitly set x0 to float64
+
+t1 =t.time()
+CD = f_jit(x0)
+t2 = t.time()
+print((t2-t1)*1000.0, "ms for first evaluation of f_jit")
+CD = f_jit(x0).block_until_ready()
+t3 = t.time()
+print((t3-t2)*1000.0, "ms for second evaluation of f_jit")
+
+
 
 # Définir la contrainte au format scipy
 constraint = {

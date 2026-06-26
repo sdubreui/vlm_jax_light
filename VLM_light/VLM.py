@@ -1237,14 +1237,9 @@ class VlmStudyOptimized():
             # Integrated Cl over chord: integral of cl * dx over the chord direction
             # For discretized panels: sum of cl * chord_length
             cl_int = np.sum(cl_sorted[start_idx:end_idx] * chord_sorted[start_idx:end_idx])
-            
-            # # Normalize by the total chord size (sum of delta_x) for this column
-            chord_total = np.sum(chord_sorted[start_idx:end_idx])
-            eps = 1e-10
-            cl_int_normalized = cl_int / (chord_total + eps)
-            
+             
             y_column.append(y_col)
-            cl_integrated.append(cl_int_normalized)
+            cl_integrated.append(cl_int)
         
         # Organize data by surface
         all_surfaces = sorted(set(self.surface_ids_np))
@@ -1293,13 +1288,9 @@ class VlmStudyOptimized():
                 y_col = np.mean(y_surf_sorted[start_idx:end_idx])
                 cl_int = np.sum(cl_surf_sorted[start_idx:end_idx] * chord_surf_sorted[start_idx:end_idx])
                 
-                # Normalize by the total chord size (sum of delta_x) for this column
-                chord_total = np.sum(chord_surf_sorted[start_idx:end_idx])
-                eps = 1e-10
-                cl_int_normalized = cl_int/ (chord_total + eps)
                 
                 y_col_surf.append(y_col)
-                cl_int_surf.append(cl_int_normalized)
+                cl_int_surf.append(cl_int)
             
             surface_distributions[surface_id] = {
                 'y_column': np.array(y_col_surf),

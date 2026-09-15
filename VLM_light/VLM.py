@@ -933,7 +933,7 @@ class VlmStudyOptimized():
         """Optimized version."""
         aic,_ = self._assemble_AIC_mtx_parametrized(segments,segments_ids, control_points,normals)
         rhs = self._assemble_rhs_parametrized(normals,alpha,v_inf)
-        gamma = jnp.linalg.solve(aic, -rhs)
+        gamma = _solve_vlm(aic, -rhs)
         return gamma   
 
     @staticmethod
@@ -1402,3 +1402,31 @@ class VlmStudyOptimized():
         f.write('$EndElementData\n')
         f.close()        
         return   
+
+
+from jax import custom_vjp
+
+@custom_vjp
+def _solve_vlm(A, R):
+    """Résolution du système VLM : A * Gamma = R"""
+    return jlinalg.solve(A, R)
+
+def _solve_vlm_fwd(A, R):
+    gamma = jlinalg.solve(A, R)
+    # On sauvegarde A et gamma pour la passe arrière
+    return gamma, (A, gamma)
+
+def _solve_vlm_bwd(res, g):
+    A, gamma = res
+    # g est la graine adjointe bar_gamma (sensibilité de la portance/traînée par rapport à Gamma)
+    
+    # ÉTAPE CLÉ : Résolution avec la transposée A.T !
+    lambd = jlinalg.solve(A.T, g)
+    
+    # Calcul des sensibilités par rapport à A (la géométrie/AIC) et R (le downwash)
+    bar_A = -jnp.outer(lambd, gamma)
+    bar_R = lambd
+    
+    return bar_A, bar_R
+
+_solve_vlm.defvjp(_solve_vlm_fwd, _solve_vlm_bwd)
